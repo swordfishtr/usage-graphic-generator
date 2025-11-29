@@ -156,18 +156,39 @@
                 
                 <div class="space-y-6">
                     <div>
-                        <label for="title-text" class="block text-sm font-medium text-gray-700 mb-1">First Title Line</label>
+                        <label for="title-text" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
                         <input type="text" id="title-text" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" value="Usage Stats Title">
                     </div>
 
                     <div>
-                        <label for="subtitle-text" class="block text-sm font-medium text-gray-700 mb-1">Second Title Line</label>
+                        <label for="subtitle-text" class="block text-sm font-medium text-gray-700 mb-1">Subtitle</label>
                         <input type="text" id="subtitle-text" class="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500" value="Usage Stats Subtitle">
                     </div>
                     
                     <div>
                         <label for="pokemon-count" class="block text-sm font-medium text-gray-700 mb-1">Number of Pokémon</label>
                         <input type="number" id="pokemon-count" class="w-full p-2 border border-gray-300 rounded-md shadow-sm" value="35" min="1" max="99">
+                    </div>
+
+                    <!-- Layout Options Section -->
+                    <div class="ps-input-block">
+                        <h3 class="text-lg font-bold text-gray-800 mb-3">Layout Options</h3>
+                        
+                        <div class="mb-4">
+                            <label for="top10-layout" class="block text-sm font-medium text-gray-700 mb-1">Top 10 Layout</label>
+                            <select id="top10-layout" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="columns">Columns</option>
+                                <option value="rows">Rows</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label for="remaining-layout" class="block text-sm font-medium text-gray-700 mb-1">Remaining Pokémon Layout</label>
+                            <select id="remaining-layout" class="w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="columns">Columns</option>
+                                <option value="rows">Rows</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div id="pokemon-inputs" class="space-y-4 max-h-96 overflow-y-auto pr-2">
@@ -179,7 +200,7 @@
                             Generate Graphic
                         </button>
                         <button id="download-btn" class="w-full ps-btn">
-                            Download as PNG (wip)
+                            Download as PNG
                         </button>
                     </div>
 
@@ -270,6 +291,9 @@
         const dataTextarea = document.getElementById('data-textarea');
         const saveDataBtn = document.getElementById('save-data-btn');
         const loadDataBtn = document.getElementById('load-data-btn');
+        // Layout Options
+        const top10LayoutSelect = document.getElementById('top10-layout');
+        const remainingLayoutSelect = document.getElementById('remaining-layout');
 
         // DOM elements for Color Customizer inputs
         const colorBg1Input = document.getElementById('color-bg1');
@@ -429,6 +453,8 @@
             const displayTitle = wrapUserCaps(title, title.toUpperCase());
             const displaySubtitle = wrapUserCaps(subtitle, subtitle.toUpperCase());
             const count = parseInt(pokemonCountInput.value, 10);
+            const top10Layout = top10LayoutSelect.value;
+            const remainingLayout = remainingLayoutSelect.value;
 
             const pokemonData = [];
             for (let i = 0; i < count; i++) {
@@ -457,24 +483,110 @@
             // Set background gradient dynamically
             graphicOutput.style.background = `linear-gradient(145deg, ${bg1}, ${bg2}, ${bg3})`;
 
-            // Prepare two columns for the top 10
-            let top10_left = '';
-            let top10_right = '';
-            for (let i = 0; i < 5 && i < pokemonData.length; i++) {
-                top10_left += createPokemonHTML(pokemonData[i], i + 1, rankColor, nameColor, usageColor);
-            }
-            for (let i = 5; i < 10 && i < pokemonData.length; i++) {
-                top10_right += createPokemonHTML(pokemonData[i], i + 1, rankColor, nameColor, usageColor);
+            // Prepare top 10 based on selected layout
+            let top10HTML = '';
+            if (top10Layout === 'columns') {
+                // Current columns layout (1-5 left, 6-10 right)
+                let top10_left = '';
+                let top10_right = '';
+                for (let i = 0; i < 5 && i < pokemonData.length; i++) {
+                    top10_left += createPokemonHTML(pokemonData[i], i + 1, rankColor, nameColor, usageColor);
+                }
+                for (let i = 5; i < 10 && i < pokemonData.length; i++) {
+                    top10_right += createPokemonHTML(pokemonData[i], i + 1, rankColor, nameColor, usageColor);
+                }
+                top10HTML = `
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col space-y-4">
+                            ${top10_left}
+                        </div>
+                        <div class="flex flex-col space-y-4">
+                            ${top10_right}
+                        </div>
+                    </div>
+                `;
+            } else {
+                // Rows layout (1-2, 3-4, 5-6, 7-8, 9-10)
+                let top10Rows = [];
+                for (let i = 0; i < 10 && i < pokemonData.length; i += 2) {
+                    const rowHTML = `
+                        <div class="flex justify-between space-x-4">
+                            ${createPokemonHTML(pokemonData[i], i + 1, rankColor, nameColor, usageColor)}
+                            ${i + 1 < pokemonData.length ? createPokemonHTML(pokemonData[i + 1], i + 2, rankColor, nameColor, usageColor) : ''}
+                        </div>
+                    `;
+                    top10Rows.push(rowHTML);
+                }
+                top10HTML = `
+                    <div class="flex flex-col space-y-4">
+                        ${top10Rows.join('')}
+                    </div>
+                `;
             }
 
-            let remainingGrid = '';
-            for (let i = 10; i < pokemonData.length; i++) {
-                remainingGrid += createMiniIconHTML(
-                  pokemonData[i].displayName, 
-                  pokemonDexNumbers[pokemonData[i].name.replace(/-/g, '')] || 0, // fallback 0 if missing
-                  i + 1,
-                  rankColor
-                );
+            // Prepare remaining Pokémon based on selected layout
+            let remainingHTML = '';
+            if (count > 10) {
+                if (remainingLayout === 'rows') {
+                    // Current rows layout
+                    let remainingGrid = '';
+                    for (let i = 10; i < pokemonData.length; i++) {
+                        remainingGrid += createMiniIconHTML(
+                          pokemonData[i].displayName, 
+                          pokemonDexNumbers[pokemonData[i].name.replace(/-/g, '')] || 0, // fallback 0 if missing
+                          i + 1,
+                          rankColor
+                        );
+                    }
+                    remainingHTML = `
+                        <div class="grid grid-cols-5 gap-2 pt-4 border-t-2 border-white border-opacity-20">
+                            ${remainingGrid}
+                        </div>
+                    `;
+                } else {
+                    // Columns layout for remaining Pokémon
+                    const remainingCount = pokemonData.length - 10;
+                    const columnsCount = Math.ceil(remainingCount / 5);
+                    
+                    // Create columns
+                    let columns = Array.from({ length: columnsCount }, () => []);
+                    
+                    // Distribute Pokémon into columns (fill each column with 5 before moving to next)
+                    for (let i = 10; i < pokemonData.length; i++) {
+                        const columnIndex = Math.floor((i - 10) / 5);
+                        if (columnIndex < columnsCount) {
+                            columns[columnIndex].push({
+                                pokemon: pokemonData[i],
+                                rank: i + 1
+                            });
+                        }
+                    }
+                    
+                    // Create HTML for columns
+                    let columnsHTML = '';
+                    for (let col = 0; col < columnsCount; col++) {
+                        let columnHTML = '';
+                        for (const item of columns[col]) {
+                            columnHTML += createMiniIconHTML(
+                                item.pokemon.displayName,
+                                pokemonDexNumbers[item.pokemon.name.replace(/-/g, '')] || 0,
+                                item.rank,
+                                rankColor
+                            );
+                        }
+                        columnsHTML += `
+                            <div class="flex flex-col space-y-2">
+                                ${columnHTML}
+                            </div>
+                        `;
+                    }
+                    
+                    remainingHTML = `
+                        <div class="grid grid-cols-${Math.min(columnsCount, 5)} gap-4 pt-4 border-t-2 border-white border-opacity-20">
+                            ${columnsHTML}
+                        </div>
+                    `;
+                }
             }
 
             graphicOutput.innerHTML = `
@@ -485,22 +597,11 @@
                         <h3 class="text-3xl font-bold" style="color: ${subtitleColor};">${displaySubtitle}</h3>
                     </div>
                     
-                    <!-- Top 10 Pokémon Grid Split -->
-                    <div class="grid grid-cols-2 gap-4">
-                        <div class="flex flex-col space-y-4">
-                            ${top10_left}
-                        </div>
-                        <div class="flex flex-col space-y-4">
-                            ${top10_right}
-                        </div>
-                    </div>
+                    <!-- Top 10 Pokémon -->
+                    ${top10HTML}
                     
                     <!-- Remaining Pokémon -->
-                    ${count > 10 ? `
-                    <div class="grid grid-cols-5 gap-2 pt-4 border-t-2 border-white border-opacity-20">
-                        ${remainingGrid}
-                    </div>
-                    ` : ''}
+                    ${remainingHTML}
                 </div>
             `;
         }
@@ -623,14 +724,11 @@
         // --- Event Listeners ---
         pokemonCountInput.addEventListener('change', () => {
             updatePokemonInputs();
-            generateGraphic();
         });
         generateBtn.addEventListener('click', generateGraphic);
         downloadBtn.addEventListener('click', downloadGraphic);
         saveDataBtn.addEventListener('click', saveData);
         loadDataBtn.addEventListener('click', loadData);
-
-        
 
         // --- Initial Load ---
         updatePokemonInputs();
